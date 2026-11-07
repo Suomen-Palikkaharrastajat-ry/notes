@@ -1,0 +1,240 @@
+// One-off manual UI check (not part of CI): verifies the bottom status bar,
+// the Vim mode indicator, the visible visual-mode selection, and that errors
+// surface as toasts. Run after `npm run build`:
+//   CHROMIUM=/path/to/chrome node scripts/verify-ui.mjs
+import { createServer } from "node:http";
+import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { extname, join, normalize } from "node:path";
+import puppeteer from "puppeteer-core";
+
+const DIST = new URL("../dist/", import.meta.url).pathname;
+const TYPES = {
+  ".html": "text/html", ".js": "text/javascript", ".css": "text/css",
+  ".wasm": "application/wasm", ".otf": "font/otf", ".svg": "image/svg+xml", ".json": "application/json",
+};
+const server = createServer(async (req, res) => {
+  let p = normalize(decodeURIComponent(req.url.split("?")[0]));
+  if (p === "/") p = "/index.html";
+  const file = join(DIST, p);
+  if (!existsSync(file)) { res.statusCode = 404; return res.end("not found"); }
+  res.setHeader("Content-Type", TYPES[extname(file)] ?? "application/octet-stream");
+  res.end(await readFile(file));
+});
+await new Promise((r) => server.listen(0, r));
+const port = server.address().port;
+
+const browser = await puppeteer.launch({
+  executablePath: process.env.CHROMIUM,
+  headless: true,
+  args: ["--no-sandbox", "--disable-gpu"],
+});
+const page = await browser.newPage();
+page.on("pageerror", (e) => console.error("PAGEERROR:", e.message));
+page.on("console", (m) => m.type() === "error" && console.error("CONSOLE:", m.text()));
+
+// Run the whole session as a touch device (coarse pointer, no hover) so the
+// Vim keyboard gate can be checked without a reload. puppeteer-core's
+// emulateMediaFeatures has a fixed whitelist excluding hover/pointer, so go
+// through CDP directly.
+const cdp = await page.target().createCDPSession();
+await cdp.send("Emulation.setEmulatedMedia", {
+  features: [
+    { name: "hover", value: "none" },
+    { name: "pointer", value: "coarse" },
+  ],
+});
+
+await page.goto(`http://localhost:${port}/`, { waitUntil: "load" });
+await page.waitForFunction(
+  () => document.getElementById("status")?.textContent === "käännetty",
+  { timeout: 120000 },
+);
+
+// Vim is keyboard-gated: on a touch device with no keyboard the control starts
+// hidden (it is revealed below once a hardware keystroke is detected).
+console.log("VIM_HIDDEN_NO_KEYBOARD:", await page.$eval("#vim-label", (e) => e.offsetParent === null));
+
+// Controls now live in the bottom status bar.
+const inBar = await page.$$eval("#statusbar button, #statusbar #vim-mode, #statusbar #vim",
+  (els) => els.map((e) => e.id));
+console.log("STATUSBAR_CONTROLS:", inBar.join(", "));
+
+async function dragSelectFirstLine() {
+  const box = await page.$eval(".cm-line", (e) => {
+    const r = e.getBoundingClientRect();
+    return { x: r.x, y: r.y + r.height / 2, w: r.width };
+  });
+  await page.mouse.move(box.x + 4, box.y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + Math.min(120, box.w - 8), box.y, { steps: 8 });
+  await page.mouse.up();
+  await new Promise((r) => setTimeout(r, 120));
+}
+
+// Baseline: a plain mouse selection must be painted (drawSelection + theme).
+await dragSelectFirstLine();
+const plainSel = await page.$$eval(".cm-selectionBackground", (els) => els.map((e) => getComputedStyle(e).backgroundColor));
+console.log("PLAIN_SELECTION_BACKGROUNDS:", JSON.stringify(plainSel));
+
+// Vim is keyboard-gated. Simulate a hardware keystroke (a bare Control press,
+// which an on-screen keyboard does not produce) to reveal the control — headless
+// Chromium may report a coarse pointer, which keeps it hidden otherwise.
+await page.click(".cm-content");
+await page.keyboard.down("Control");
+await page.keyboard.up("Control");
+await page.waitForSelector("#vim-label", { visible: true });
+console.log("VIM_SHOWN_AFTER_KEY:", await page.$eval("#vim-label", (e) => e.offsetParent !== null));
+
+// Enable Vim and check the mode badge appears as NORMAL.
+await page.click("#vim");
+await page.click(".cm-content"); // focus the editor
+await new Promise((r) => setTimeout(r, 100));
+const normal = await page.$eval("#vim-mode", (e) => ({ hidden: e.hidden, text: e.textContent, mode: e.dataset.mode }));
+console.log("VIM_MODE_NORMAL:", JSON.stringify(normal));
+
+// A mouse drag in Vim mode enters visual mode; the selection must be painted.
+await dragSelectFirstLine();
+const visual = await page.$eval("#vim-mode", (e) => ({ text: e.textContent, mode: e.dataset.mode }));
+const sel = await page.$$eval(".cm-selectionBackground", (els) =>
+  els.map((e) => getComputedStyle(e).backgroundColor),
+);
+console.log("VIM_MODE_VISUAL:", JSON.stringify(visual));
+console.log("SELECTION_BACKGROUNDS:", JSON.stringify(sel));
+
+// Trigger a conversion error and confirm it surfaces as a bottom-right toast,
+// while the header keeps its single short line (no reflow).
+const headerBefore = await page.$eval("header", (e) => e.getBoundingClientRect().height);
+await page.click("#vim"); // back to plain editing for a reliable select-all
+await page.click(".cm-content");
+await page.keyboard.down("Control");
+await page.keyboard.press("a");
+await page.keyboard.up("Control");
+await page.keyboard.type("---\nagenda: true\n---\n\nHei.\n");
+await new Promise((r) => setTimeout(r, 700));
+const toast = await page.evaluate(() => {
+  const t = document.querySelector("#toasts .toast");
+  return {
+    count: document.querySelectorAll("#toasts .toast").length,
+    text: t ? t.querySelector(".toast-message")?.textContent.slice(0, 40) : null,
+    role: t?.getAttribute("role"),
+    hasClose: !!t?.querySelector(".toast-close[aria-label]"),
+  };
+});
+const headerAfter = await page.$eval("header", (e) => e.getBoundingClientRect().height);
+const status = await page.$eval("#status", (e) => e.textContent);
+console.log("TOAST:", JSON.stringify(toast));
+console.log("STATUS_AFTER_ERROR:", status);
+console.log("HEADER_HEIGHT_STABLE:", headerBefore === headerAfter, headerBefore, headerAfter);
+
+// Dismiss the toast with its close button (keyboard-reachable, unlike the old
+// click-anywhere) and confirm it goes away.
+await page.click("#toasts .toast .toast-close");
+await new Promise((r) => setTimeout(r, 400));
+console.log("TOAST_DISMISSED:", (await page.$$("#toasts .toast")).length === 0);
+
+// Accessibility: every icon button must carry an accessible name and render an
+// SVG icon (no text label).
+const iconButtons = await page.$$eval(".iconbtn", (els) =>
+  els.map((e) => ({
+    id: e.id || e.querySelector("input")?.id || "(logo)",
+    name: e.getAttribute("aria-label") || e.querySelector(".sr-only")?.textContent || "",
+    hasIcon: !!e.querySelector("svg.icon use"),
+  })),
+);
+const unnamed = iconButtons.filter((b) => !b.name || !b.hasIcon);
+console.log("ICON_BUTTONS:", iconButtons.length, "UNNAMED_OR_NO_ICON:", JSON.stringify(unnamed));
+
+// The view switch is a labelled group of aria-pressed toggle buttons (not a
+// mislabelled tablist).
+const togglePressed = await page.evaluate(() => ({
+  group: document.getElementById("view-toggle")?.getAttribute("role"),
+  editor: document.getElementById("show-editor")?.getAttribute("aria-pressed"),
+  preview: document.getElementById("show-preview")?.getAttribute("aria-pressed"),
+}));
+console.log("VIEW_TOGGLE:", JSON.stringify(togglePressed));
+
+// The "Poista logo" button must stay hidden until a logo is uploaded (the
+// [hidden] attribute has to beat .iconbtn's display rule).
+console.log("LOGO_CLEAR_HIDDEN:", await page.$eval("#logo-clear", (e) => e.offsetParent === null));
+
+// PWA: a manifest link, a theme colour, an apple-touch-icon, and a registered
+// service worker (localhost counts as a secure context, so registration runs).
+const pwa = await page.evaluate(async () => {
+  const manifestHref = document.querySelector('link[rel="manifest"]')?.getAttribute("href");
+  const themeColor = document.querySelector('meta[name="theme-color"]')?.getAttribute("content");
+  const appleIcon = !!document.querySelector('link[rel="apple-touch-icon"]');
+  let manifestOk = false;
+  try {
+    const m = await (await fetch(manifestHref)).json();
+    manifestOk = m.display === "standalone" && Array.isArray(m.icons) && m.icons.length > 0;
+  } catch {}
+  const reg = await navigator.serviceWorker?.getRegistration();
+  return { manifestHref, themeColor, appleIcon, manifestOk, swRegistered: !!reg };
+});
+console.log("PWA:", JSON.stringify(pwa));
+
+// Mobile layout: at a phone viewport the two panes collapse to one column with
+// the Editor/Preview switch deciding which pane is visible, and nothing should
+// overflow the viewport width. At a wide viewport both panes show and the
+// switch is hidden.
+const visible = (sel) =>
+  page.$eval(sel, (e) => getComputedStyle(e).display !== "none" && e.offsetParent !== null);
+const noHScroll = () =>
+  page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+// Largest gap between any visible bottom-bar control's centre and the bar's
+// centre — should be ~0 if the buttons are vertically centred.
+const barCenterOffset = () =>
+  page.evaluate(() => {
+    const bar = document.getElementById("statusbar").getBoundingClientRect();
+    const mid = bar.top + bar.height / 2;
+    const ctrls = [...document.querySelectorAll("#statusbar .iconbtn, #statusbar .view-toggle button")]
+      .filter((e) => e.offsetParent !== null);
+    return Math.max(0, ...ctrls.map((e) => {
+      const r = e.getBoundingClientRect();
+      return Math.abs(r.top + r.height / 2 - mid);
+    }));
+  });
+console.log("DESKTOP_BOTTOMBAR_CENTER_OFFSET_PX:", (await barCenterOffset()).toFixed(2));
+
+await page.setViewport({ width: 390, height: 780 }); // iPhone-ish portrait
+await new Promise((r) => setTimeout(r, 150));
+console.log("MOBILE_HEADER_HIDDEN:", !(await visible("header")));
+const toggleShown = await visible("#view-toggle");
+const mobileDefault = { editor: await visible("#editor"), preview: await visible("#preview") };
+await page.click("#show-preview");
+const mobilePreview = { editor: await visible("#editor"), preview: await visible("#preview") };
+await page.click("#show-editor");
+const mobileEditor = { editor: await visible("#editor"), preview: await visible("#preview") };
+const mobileNoHScroll = await noHScroll();
+console.log("MOBILE_TOGGLE_SHOWN:", toggleShown);
+console.log("MOBILE_DEFAULT (editor only):", JSON.stringify(mobileDefault));
+console.log("MOBILE_PREVIEW (preview only):", JSON.stringify(mobilePreview));
+console.log("MOBILE_EDITOR (editor only):", JSON.stringify(mobileEditor));
+console.log("MOBILE_NO_HSCROLL:", mobileNoHScroll);
+console.log("MOBILE_BOTTOMBAR_CENTER_OFFSET_PX:", (await barCenterOffset()).toFixed(2));
+
+// In preview mode the floating controls and the (invisible) logo file input must
+// not cover the bottom-bar actions: a tap on each must land on that button, not
+// be swallowed by a neighbour (the logo overlay used to steal Download's taps).
+await page.click("#show-preview");
+await page.evaluate(() => document.getElementById("preview-controls").classList.add("show"));
+await new Promise((r) => setTimeout(r, 100));
+const hitTest = await page.evaluate(() => {
+  const at = (id) => {
+    const b = document.getElementById(id).getBoundingClientRect();
+    const t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    return t?.closest("#" + id) ? "ok" : "covered-by:" + (t?.id || t?.tagName);
+  };
+  return { download: at("download"), reset: at("reset"), "logo-label": at("logo-label") };
+});
+console.log("MOBILE_PREVIEW_BAR_HITTEST:", JSON.stringify(hitTest));
+await page.click("#show-editor");
+
+await page.setViewport({ width: 1200, height: 800 }); // desktop
+await new Promise((r) => setTimeout(r, 150));
+const wide = { toggle: await visible("#view-toggle"), editor: await visible("#editor"), preview: await visible("#preview") };
+console.log("WIDE (toggle hidden, both panes):", JSON.stringify(wide));
+
+await browser.close();
+server.close();

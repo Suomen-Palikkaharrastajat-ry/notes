@@ -1,0 +1,23 @@
+{
+  "name": "broadcast-signaling",
+  "private": true,
+  "type": "module",
+  "description": "WebRTC signaling Worker + Durable Object for live-preview sharing",
+  "license": "MIT",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test --experimental-strip-types scripts/test-cors.ts && node --experimental-strip-types scripts/test-phase2.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lib0": "0.2.119",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.33"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261106.1",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.158.0"
+  }
+}

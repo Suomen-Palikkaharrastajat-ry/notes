@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Asiakirjat – SFS 2487:2024">
+  <!-- Full-bleed background so the icon also works as a maskable PWA icon
+       (the platform crops to its own shape; the document stays in the safe zone). -->
+  <rect width="512" height="512" fill="#05131D"/>
+  <!-- Document sheet with a folded top-right corner, centred in the safe area. -->
+  <path d="M162 120 H320 L366 166 V376 a16 16 0 0 1 -16 16 H162 a16 16 0 0 1 -16 -16 V136 a16 16 0 0 1 16 -16 Z" fill="#FFFFFF"/>
+  <path d="M320 120 L320 166 H366 Z" fill="#E5E7EB"/>
+  <!-- Accent header bar plus body text lines. -->
+  <rect x="176" y="196" width="120" height="16" rx="8" fill="#FAC80A"/>
+  <rect x="176" y="232" width="160" height="11" rx="5.5" fill="#6B7280"/>
+  <rect x="176" y="258" width="160" height="11" rx="5.5" fill="#6B7280"/>
+  <rect x="176" y="284" width="138" height="11" rx="5.5" fill="#6B7280"/>
+  <rect x="176" y="310" width="160" height="11" rx="5.5" fill="#6B7280"/>
+  <rect x="176" y="336" width="104" height="11" rx="5.5" fill="#6B7280"/>
+</svg>
