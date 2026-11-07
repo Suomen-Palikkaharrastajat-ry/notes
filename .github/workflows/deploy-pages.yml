@@ -1,4 +1,4 @@
-name: Deploy Cloudflare Pages
+name: Deploy GitHub Pages
 
 on:
   push:
@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: deploy-pages-${{ github.ref }}
@@ -21,8 +23,14 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v5
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -32,11 +40,13 @@ jobs:
         working-directory: web
         run: npm ci && npm run build
         env:
+          VITE_BASE: ${{ steps.pages.outputs.base_path }}/
           VITE_COLLAB_URL: ${{ vars.VITE_COLLAB_URL }}
           VITE_SIGNALING_URL: ${{ vars.VITE_SIGNALING_URL }}
-      - name: Deploy Pages site
-        uses: cloudflare/wrangler-action@v3
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web/dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          path: web/dist
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

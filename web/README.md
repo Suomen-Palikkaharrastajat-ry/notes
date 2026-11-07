@@ -254,7 +254,7 @@ can use `{{association.name}}`, `{{association.businessId}}`,
 optional.
 
 Vite bundles the configured SVG logo and templates into the static frontend, so
-Cloudflare Pages does not need access to source files at runtime. Logo
+GitHub Pages does not need access to source files at runtime. Logo
 resolution is: user upload, explicit user clear, selected template logo, then
 the organization default. The PWA manifest metadata is branded during the
 production build as well. The UI uses the design-guide Outfit variable font
@@ -268,15 +268,17 @@ For an organization deployment:
 2. Set `ALLOWED_ORIGINS` in `signaling/wrangler.toml` to only the editor's
    production origin (plus localhost while developing). An explicit allowlist
    replaces the upstream defaults and rejects origin-less requests.
-3. Add GitHub Actions secrets `CLOUDFLARE_API_TOKEN` and
-   `CLOUDFLARE_ACCOUNT_ID`; set repository variables
-   `CLOUDFLARE_PAGES_PROJECT`, `VITE_COLLAB_URL`, and `VITE_SIGNALING_URL`.
-   The included `.github/workflows/deploy-pages.yml` and
-   `.github/workflows/deploy-signaling.yml` deploy on pushes to `main` and can
-   also be run manually.
-4. For local deploys, build the worker with
-   `cd signaling && npm ci && npx wrangler deploy`; build the frontend with
-   `cd web && npm ci && VITE_COLLAB_URL=https://signaling.example.fi VITE_SIGNALING_URL=https://signaling.example.fi npm run build`, then publish `web/dist/` to Pages.
+3. Enable GitHub Pages with **GitHub Actions** as the source. Set repository
+   variables `VITE_COLLAB_URL` and `VITE_SIGNALING_URL` to the signaling
+   Worker URL. The included `.github/workflows/deploy-pages.yml` builds with
+   GitHub's Pages actions and deploys on pushes to `main`; it can also be run
+   manually.
+4. The Worker remains a manual deployment: when you need to update it, run
+   `cd signaling && npm ci && npx wrangler deploy` with your Cloudflare
+   credentials available locally. No Cloudflare deploy secrets are needed in
+   GitHub Actions.
+5. For a local frontend build, run
+   `cd web && npm ci && VITE_BASE=/repo-name/ VITE_COLLAB_URL=https://signaling.example.fi VITE_SIGNALING_URL=https://signaling.example.fi npm run build`, then publish `web/dist/` to GitHub Pages.
 
 See [`signaling/README.md`](../signaling/README.md) for Worker configuration,
 Cloudflare bindings, and local testing details.
