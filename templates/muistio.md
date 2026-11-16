@@ -1,24 +1,39 @@
 ---
 doctype: Muistio
-date: 7.11.2026
+date: PP.KK.VVVV
 author: Etunimi Sukunimi
-subject: Muistion aihe
-title: Muistion otsikko
+subject: Muistion aihe tai asia
+title: Muistio aiheesta
+features: [no-endmatter-newpage]
 contact:
   name: "{{association.name}}"
   lines:
-    - "{{association.addressLines}}"
     - "{{association.email}}"
+    - "{{association.website}}"
+    - "Y-tunnus: {{association.businessId}}"
 ---
 
-# 1. Tausta
+Aika ja paikka
+:   PP.KK.VVVV klo TT.MM\
+    Kokouspaikka / etäyhteys
 
-Kuvaa asian tausta ja muistion laatimisen tarkoitus.
+Osallistujat
+:   Etunimi Sukunimi\
+    Etunimi Sukunimi\
+    Etunimi Sukunimi
 
-# 2. Keskeiset havainnot
+# Käsitellyt asiat
 
-Kirjaa tähän olennaiset tiedot.
+[Kirjaa tähän käsitellyt asiat, tausta ja keskeiset havainnot.]
 
-# 3. Jatkotoimet
+# [Muu käsiteltävä asia]
 
-Luettele sovitut toimenpiteet, vastuuhenkilöt ja aikataulut.
+[Kirjaa tähän seuraava käsiteltävä asia tai huomio.]
+
+# Sovitut toimenpiteet ja vastuut
+
+[Kirjaa tähän sovitut jatkotoimenpiteet, vastuuhenkilöt ja määräajat.]
+
+::: handsignature
+Etunimi Sukunimi, rooli
+:::

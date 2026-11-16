@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import {
   SelectionHighlighter,
@@ -9,6 +12,7 @@ import {
 import { extractTextLines } from "../src/highlight.ts";
 import { Broadcaster, Viewer, type SelectionPayload, type Snapshot } from "../src/share.ts";
 import { $typst } from "@myriaddreamin/typst.ts/dist/esm/contrib/snippet.mjs";
+import { preloadRemoteFonts } from "@myriaddreamin/typst.ts";
 
 test("normalize: strips markdown formatting and normalizes whitespace", () => {
   assert.equal(normalize("# Otsikko"), "otsikko");
@@ -412,6 +416,19 @@ test("Broadcaster and Viewer: selection payload synchronization across data chan
 });
 
 test("Real Typst SVG integration: end-to-end selection highlight on rendered document", async () => {
+  const currentDir = dirname(fileURLToPath(import.meta.url));
+  const webDir = resolve(currentDir, "..");
+  const compilerWasm = readFileSync(resolve(webDir, "node_modules/@myriaddreamin/typst-ts-web-compiler/pkg/typst_ts_web_compiler_bg.wasm"));
+  const rendererWasm = readFileSync(resolve(webDir, "node_modules/@myriaddreamin/typst-ts-renderer/pkg/typst_ts_renderer_bg.wasm"));
+  const fontFiles = readdirSync(resolve(webDir, "public/fonts")).filter((f) => f.endsWith(".otf"));
+  const fontBuffers = fontFiles.map((f) => new Uint8Array(readFileSync(resolve(webDir, `public/fonts/${f}`)).buffer));
+
+  $typst.setCompilerInitOptions({
+    getModule: () => compilerWasm,
+    beforeBuild: [preloadRemoteFonts(fontBuffers, { assets: false })],
+  });
+  $typst.setRendererInitOptions({ getModule: () => rendererWasm });
+
   const svg = await $typst.svg({
     mainContent: "= Kokouspöytäkirja 1/2026\n\n1. Kokouksen avaus\nPuheenjohtaja avasi kokouksen klo 10.00.\n\n2. Laillisuus ja päätösvaltaisuus\nKokous todettiin lailliseksi ja päätösvaltaiseksi.",
   });

@@ -1,38 +1,43 @@
 ---
 doctype: Toimintakertomus
-date: 7.11.2026
+date: PP.KK.VVVV
 author: Hallitus
-subject: Tilikauden yhteenveto
-title: Toimintakertomus 2026
+subject: Tilikauden VVVV toimintakertomus
+title: Toimintakertomus VVVV
+features: [toc, no-endmatter-newpage]
 contact:
   name: "{{association.name}}"
   lines:
-    - "{{association.addressLines}}"
     - "{{association.email}}"
     - "{{association.website}}"
     - "Y-tunnus: {{association.businessId}}"
 ---
 
-# 1. Johdanto
+# Toiminta tilikaudella
 
-Tässä toimintakertomuksessa kuvataan {{association.name}}n toimintaa tilikaudella.
+[Selosta päättyneen tilikauden tärkeimmät tapahtumat, kilpailut, hankkeet ja muu yhdistyksen järjestämä tai tukema toiminta.]
 
-# 2. Yhdistyksen toiminta
+- [Tapahtuma tai toimintamuoto: selostus ja toteuma]
+- [Tapahtuma tai toimintamuoto: selostus ja toteuma]
 
-Kuvaa vuoden tärkeimmät tapahtumat, hankkeet ja jäsenille tarjotut palvelut.
+# [Muu toiminta, jäsenistö tai hankkeet]
 
-## 2.1 Tapahtumat ja osallistuminen
+[Kirjaa tähän jäsenmäärän kehitys, jäsenedut, viestintäkanavat tai muut tilikauden erityishankkeet.]
 
-Kirjaa tapahtumat, osallistujamäärät ja keskeiset tulokset.
+# Hallinto ja kokoukset
 
-## 2.2 Viestintä ja yhteistyö
+[Kuvaa yhdistyksen sääntömääräiset ja ylimääräiset kokoukset sekä hallituksen kokoukset ja toiminta tilikaudella.]
 
-Kuvaa viestintää sekä yhteistyötä muiden yhteisöjen kanssa.
+Hallituksen kokoonpano tilikaudella:
 
-# 3. Hallinto
+- Etunimi Sukunimi, puheenjohtaja
+- Etunimi Sukunimi, varapuheenjohtaja
+- Etunimi Sukunimi, sihteeri
+- Etunimi Sukunimi, taloudenhoitaja
+- Etunimi Sukunimi, hallituksen jäsen
 
-Luettele hallituksen kokoonpano ja yhdistyksen kokoukset.
+Yhdistyksen toiminnantarkastajana toimi Etunimi Sukunimi ja varatoiminnantarkastajana Etunimi Sukunimi.
 
-# 4. Talous ja tuleva toiminta
+# Talous ja tilinpäätöksen tiivistelmä
 
-Kuvaa talouden pääkohdat sekä tulevan vuoden painopisteet.
+[Kuvaa tilikauden talouden pääkohdat, tulot ja menot, varainhankinta sekä tilikauden tulos. Viittaa tarkemmin tilinpäätökseen.]
