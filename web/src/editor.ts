@@ -24,8 +24,8 @@ import { FileManager, formatFileDate } from "./files.ts";
 import { getCollabUrl } from "./config.ts";
 import { getActiveBranding } from "./branding.ts";
 import { TemplateManager } from "./template-manager.ts";
-// A vendored copy of examples/markdown/esimerkki-poytakirja.md (spec Liite A),
-// kept so the bundle is self-contained for both `npm run dev` and the nix build.
+import { getDocumentTemplates } from "./templates.ts";
+// The default seed document (generic Muistio template), kept so the bundle is self-contained.
 import seed from "./seed.md?raw";
 
 export function initEditor() {
@@ -174,8 +174,17 @@ export function initEditor() {
     return md.replace(/^logo:.*$/m, "");
   }
 
+  function getInitialDefaultSeed(): string {
+    const templates = getDocumentTemplates();
+    const muistioTpl = templates.find((t) => t.id === "muistio");
+    if (muistioTpl?.content) {
+      return withoutLogo(muistioTpl.content);
+    }
+    return withoutLogo(seed);
+  }
+
   const fileManager = new FileManager({
-    defaultSeed: withoutLogo(seed),
+    defaultSeed: getInitialDefaultSeed(),
   });
 
   function templateLogoStorageKey(fileId = fileManager.getActiveFile().id): string {
@@ -757,7 +766,7 @@ export function initEditor() {
 
   resetEl.addEventListener("click", () => {
     if (!confirm("Aloitetaanko alusta esimerkkiasiakirjasta? Nykyisen tiedoston muutokset ja logo poistetaan.")) return;
-    const fresh = withoutLogo(seed);
+    const fresh = getInitialDefaultSeed();
     fileManager.resetActiveFile(fresh);
     clearLogo();
     lsRemove(STORE.logoCleared);
@@ -826,7 +835,7 @@ export function initEditor() {
         applyFileContentToEditor(newFile.content);
         renderFilesList();
         closeFilesPanel();
-        toast(`Asiakirja pohjasta "${template.title}" luotu.`);
+        toast(`Asiakirja pohjasta "${template.title}" luotu.`, "success");
       },
     });
   }
@@ -839,7 +848,7 @@ export function initEditor() {
         templateManager.open();
       } else {
         fileManager.saveActiveContent(editor.state.doc.toString());
-        const freshSeed = withoutLogo(seed);
+        const freshSeed = getInitialDefaultSeed();
         const newFile = fileManager.createFile(undefined, freshSeed);
         applyFileContentToEditor(newFile.content);
         renderFilesList();
