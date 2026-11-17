@@ -25,6 +25,7 @@ import { getCollabUrl } from "./config.ts";
 import { getActiveBranding } from "./branding.ts";
 import { TemplateManager } from "./template-manager.ts";
 import { getDocumentTemplates } from "./templates.ts";
+import { exportToDocx, importFromDocx, downloadDocxFile } from "./docx.ts";
 // The default seed document (generic Muistio template), kept so the bundle is self-contained.
 import seed from "./seed.md?raw";
 
@@ -487,7 +488,27 @@ export function initEditor() {
     broadcaster?.push(snapshot());
   }
 
-  downloadEl.addEventListener("click", async () => {
+  const updateDownloadTooltip = (mod: boolean) => {
+    downloadEl.title = mod
+      ? "Lataa Word (.docx)"
+      : "Lataa PDF (Alt-klikkaus: lataa Word / .docx)";
+  };
+  downloadEl.title = "Lataa PDF (Alt-klikkaus: lataa Word / .docx)";
+  downloadEl.setAttribute("aria-label", "Lataa PDF (Alt-klikkaus: lataa Word / .docx)");
+
+  downloadEl.addEventListener("click", async (e: MouseEvent) => {
+    if (e.altKey || e.shiftKey) {
+      try {
+        const docxBytes = exportToDocx(editor.state.doc.toString());
+        const baseName = fileManager.getActiveFile().name.replace(/\.[^.]+$/, "") || "asiakirja";
+        downloadDocxFile(docxBytes, `${baseName}.docx`);
+        toast(`Asiakirja ladattu Word-muodossa (${baseName}.docx).`, "success");
+        return;
+      } catch (err) {
+        fail(err instanceof Error ? err.message : String(err));
+        return;
+      }
+    }
     try {
       const pdf = await preview.pdf();
       if (!pdf) return;
@@ -840,10 +861,105 @@ export function initEditor() {
     });
   }
 
+  function promptImportDocxOrMd() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".docx,.md,.txt";
+    input.style.display = "none";
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        fileManager.saveActiveContent(editor.state.doc.toString());
+        let content = "";
+        if (file.name.endsWith(".docx")) {
+          const buf = await file.arrayBuffer();
+          content = importFromDocx(buf);
+        } else {
+          content = await file.text();
+        }
+        const baseName = file.name.replace(/\.[^.]+$/, "");
+        const newFileName = fileManager.suggestFileName(`${baseName}.md`);
+        const newFile = fileManager.createFile(newFileName, content);
+        applyFileContentToEditor(newFile.content);
+        renderFilesList();
+        closeFilesPanel();
+        toast(`Tiedosto "${newFile.name}" tuotu onnistuneesti!`, "success");
+      } catch (err) {
+        fail(err instanceof Error ? err.message : String(err));
+      }
+    });
+    document.body.appendChild(input);
+    input.click();
+    input.remove();
+  }
+
+  const updateFilesNewTooltip = (mod: boolean) => {
+    if (filesNewEl) {
+      filesNewEl.title = mod
+        ? "Tuo Word- (.docx) tai Markdown-tiedosto"
+        : "Luo uusi tiedosto (Alt-klikkaus: tuo Word- tai Markdown-tiedosto)";
+    }
+  };
+
+  if (filesNewEl) {
+    filesNewEl.title = "Luo uusi tiedosto (Alt-klikkaus: tuo Word- tai Markdown-tiedosto)";
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.altKey || e.shiftKey) {
+      updateDownloadTooltip(true);
+      updateFilesNewTooltip(true);
+    }
+  });
+
+  window.addEventListener("keyup", () => {
+    updateDownloadTooltip(false);
+    updateFilesNewTooltip(false);
+  });
+
+  window.addEventListener("dragover", (e) => {
+    if (e.dataTransfer?.types?.includes("Files")) {
+      e.preventDefault();
+    }
+  });
+
+  window.addEventListener("drop", async (e) => {
+    if (!e.dataTransfer?.files?.length) return;
+    const file = e.dataTransfer.files[0];
+    if (!file.name.endsWith(".docx") && !file.name.endsWith(".md") && !file.name.endsWith(".txt")) {
+      return;
+    }
+    e.preventDefault();
+    try {
+      fileManager.saveActiveContent(editor.state.doc.toString());
+      let content = "";
+      if (file.name.endsWith(".docx")) {
+        const buf = await file.arrayBuffer();
+        content = importFromDocx(buf);
+      } else {
+        content = await file.text();
+      }
+      const baseName = file.name.replace(/\.[^.]+$/, "");
+      const newFileName = fileManager.suggestFileName(`${baseName}.md`);
+      const newFile = fileManager.createFile(newFileName, content);
+      applyFileContentToEditor(newFile.content);
+      renderFilesList();
+      closeFilesPanel();
+      toast(`Tiedosto "${newFile.name}" tuotu onnistuneesti!`, "success");
+    } catch (err) {
+      fail(err instanceof Error ? err.message : String(err));
+    }
+  });
+
   if (filesToggleEl) {
     filesToggleEl.addEventListener("click", () => toggleFilesPanel());
     filesCloseEl?.addEventListener("click", () => closeFilesPanel());
-    filesNewEl?.addEventListener("click", () => {
+    filesNewEl?.addEventListener("click", (e: MouseEvent) => {
+      if (e.altKey || e.shiftKey) {
+        promptImportDocxOrMd();
+        return;
+      }
       if (templateManager) {
         templateManager.open();
       } else {
