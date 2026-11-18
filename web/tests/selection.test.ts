@@ -337,6 +337,153 @@ test("SelectionHighlighter: multi-page card rendering targets correct visible pa
   assert.equal(hiddenOnCard1.querySelectorAll(".selection-highlight").length, 0);
 });
 
+test("SelectionHighlighter: caching reuses pre-normalized lines and invalidates on invalidateCache()", () => {
+  const dom = new JSDOM(`
+    <div id="pages">
+      <svg class="page">
+        <g id="p1" transform="translate(0, 10)">
+          <g class="typst-text" data-tid="t1" transform="scale(0.011, -0.011)">
+            <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Rivi yksi</foreignObject></g>
+          </g>
+        </g>
+      </svg>
+    </div>
+  `);
+
+  const highlighter = new SelectionHighlighter();
+  const root = dom.window.document.getElementById("pages")!;
+
+  const lines1 = highlighter.getVisibleLines(root);
+  const lines2 = highlighter.getVisibleLines(root);
+  assert.equal(lines1, lines2, "Subsequent calls with unchanged DOM should return cached instance");
+
+  highlighter.invalidateCache();
+  const lines3 = highlighter.getVisibleLines(root);
+  assert.notEqual(lines1, lines3, "invalidateCache() forces re-extraction of lines");
+});
+
+test("SelectionHighlighter: caching detects disconnected elements and refreshes cache", () => {
+  const dom = new JSDOM(`
+    <div id="pages">
+      <svg class="page">
+        <g id="p1" transform="translate(0, 10)">
+          <g class="typst-text" data-tid="t1" transform="scale(0.011, -0.011)">
+            <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Alkuperäinen teksti</foreignObject></g>
+          </g>
+        </g>
+      </svg>
+    </div>
+  `);
+
+  const highlighter = new SelectionHighlighter();
+  const root = dom.window.document.getElementById("pages")!;
+
+  const lines1 = highlighter.getVisibleLines(root);
+  assert.equal(lines1.length, 1);
+
+  // Replace content without explicitly calling invalidateCache
+  root.innerHTML = `
+    <svg class="page">
+      <g id="p2" transform="translate(0, 10)">
+        <g class="typst-text" data-tid="t2" transform="scale(0.011, -0.011)">
+          <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Uusi korvattu teksti</foreignObject></g>
+        </g>
+      </g>
+    </svg>
+  `;
+
+  const lines2 = highlighter.getVisibleLines(root);
+  assert.notEqual(lines1, lines2, "Disconnected elements trigger cache refresh");
+  assert.equal(lines2[0].tid, "t2");
+});
+
+test("SelectionHighlighter: fast O(N) anchor matching on multi-line text with Finnish letters and bounds", () => {
+  const dom = new JSDOM(`
+    <div id="pages">
+      <svg class="page">
+        <g id="line-0" transform="translate(0, 10)">
+          <g class="typst-text" data-tid="t0" transform="scale(0.011, -0.011)">
+            <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Otsikko ennen tekstiä</foreignObject></g>
+          </g>
+        </g>
+        <g id="line-1" transform="translate(0, 30)">
+          <g class="typst-text" data-tid="t1" transform="scale(0.011, -0.011)">
+            <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Hallituksen puheenjohtaja avasi sääntömääräisen vuosikokouksen</foreignObject></g>
+          </g>
+        </g>
+        <g id="line-2" transform="translate(0, 50)">
+          <g class="typst-text" data-tid="t2" transform="scale(0.011, -0.011)">
+            <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">ja totesi osanottajat sekä päätösvaltaisuuden sääntöjen mukaisesti.</foreignObject></g>
+          </g>
+        </g>
+        <g id="line-3" transform="translate(0, 70)">
+          <g class="typst-text" data-tid="t3" transform="scale(0.011, -0.011)">
+            <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Päätettiin hyväksyä esityslista sellaisenaan ilman muutoksia.</foreignObject></g>
+          </g>
+        </g>
+        <g id="line-4" transform="translate(0, 90)">
+          <g class="typst-text" data-tid="t4" transform="scale(0.011, -0.011)">
+            <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Seuraava asia koskee talousarviota vuodelle 2026.</foreignObject></g>
+          </g>
+        </g>
+      </svg>
+    </div>
+  `);
+
+  const highlighter = new SelectionHighlighter();
+  const root = dom.window.document.getElementById("pages")!;
+
+  // Multi-line selection spanning lines 1, 2, and 3
+  highlighter.update(root, {
+    active: true,
+    mode: "visual",
+    text: "Hallituksen puheenjohtaja avasi sääntömääräisen vuosikokouksen\nja totesi osanottajat sekä päätösvaltaisuuden sääntöjen mukaisesti.\nPäätettiin hyväksyä esityslista sellaisenaan ilman muutoksia.",
+    fromLine: 2,
+    toLine: 4,
+  });
+
+  const highlights = root.querySelectorAll(".selection-highlight");
+  assert.equal(highlights.length, 3);
+
+  assert.equal(dom.window.document.getElementById("line-0")!.querySelectorAll(".selection-highlight").length, 0);
+  assert.equal(dom.window.document.getElementById("line-1")!.querySelectorAll(".selection-highlight").length, 1);
+  assert.equal(dom.window.document.getElementById("line-2")!.querySelectorAll(".selection-highlight").length, 1);
+  assert.equal(dom.window.document.getElementById("line-3")!.querySelectorAll(".selection-highlight").length, 1);
+  assert.equal(dom.window.document.getElementById("line-4")!.querySelectorAll(".selection-highlight").length, 0);
+});
+
+test("SelectionHighlighter: bullet points include preceding bullet glyph element", () => {
+  const dom = new JSDOM(`
+    <svg xmlns="http://www.w3.org/2000/svg">
+      <g id="b1" transform="translate(0, 10)">
+        <g class="typst-text" data-tid="bullet" transform="scale(0.011, -0.011)">
+          <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="20" height="60">•</foreignObject></g>
+        </g>
+      </g>
+      <g id="b2" transform="translate(20, 10)">
+        <g class="typst-text" data-tid="text" transform="scale(0.011, -0.011)">
+          <g transform="scale(16, -16)"><foreignObject x="0" y="-50" width="100" height="60">Ensimmäinen luettelokohta</foreignObject></g>
+        </g>
+      </g>
+    </svg>
+  `);
+
+  const highlighter = new SelectionHighlighter();
+  const root = dom.window.document.body;
+
+  highlighter.update(root, {
+    active: true,
+    mode: "visual",
+    text: "- Ensimmäinen luettelokohta",
+  });
+
+  const highlights = root.querySelectorAll(".selection-highlight");
+  // Preceding bullet glyph is included in selection highlight
+  assert.equal(highlights.length, 2);
+  assert.equal(dom.window.document.getElementById("b1")!.querySelectorAll(".selection-highlight").length, 1);
+  assert.equal(dom.window.document.getElementById("b2")!.querySelectorAll(".selection-highlight").length, 1);
+});
+
 test("Broadcaster and Viewer: selection payload synchronization across data channel", async () => {
   // Mock RTCDataChannel and Broadcaster / Viewer message flow
   let viewerHandler: ((e: MessageEvent) => void) | undefined;
