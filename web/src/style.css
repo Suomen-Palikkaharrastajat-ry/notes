@@ -305,16 +305,14 @@ main {
 
 /* Neon yellow marker highlighter for live edits */
 .neon-highlight {
-  fill: #ffea00;
-  mix-blend-mode: multiply;
+  fill: rgba(255, 234, 0, 0.45);
   animation: neon-fade 3s forwards;
   pointer-events: none;
 }
 
 /* Vim visual selection highlight (synchronized to viewers) */
 .selection-highlight {
-  fill: #86efac;
-  mix-blend-mode: multiply;
+  fill: rgba(134, 239, 172, 0.45);
   pointer-events: none;
 }
 
@@ -333,6 +331,7 @@ main {
 .page-pulse,
 .page-modified {
   animation: page-pulse-glow 1.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: box-shadow;
 }
 
 @keyframes page-pulse-glow {
