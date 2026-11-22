@@ -24,6 +24,7 @@ contact:
 | Toimintatuotot | Tapahtumat ja osallistumismaksut | 0,00 € | 0,00 € |
 | Muut tuotot | Avustukset, lahjoitukset ja varainhankinta | 0,00 € | 0,00 € |
 | [Muu tuottoerä] | [Erittely] | 0,00 € | 0,00 € |
+| :--- | :--- | ---: | ---: |
 | **Tulot yhteensä** | | **0,00 €** | **0,00 €** |
 | | | | |
 | **Menot** | | | |
@@ -31,8 +32,10 @@ contact:
 | Hallintokulut | Verkkopalvelut, viranomaismaksut ja tarvikkeet | 0,00 € | 0,00 € |
 | Rahoituskulut | Pankkitilin palvelumaksut | 0,00 € | 0,00 € |
 | [Muu menoerä] | [Erittely] | 0,00 € | 0,00 € |
+| :--- | :--- | ---: | ---: |
 | **Menot yhteensä** | | **0,00 €** | **0,00 €** |
 | | | | |
+| :--- | :--- | ---: | ---: |
 | **Tilikauden tulos (ylijäämä / alijäämä)** | | **0,00 €** | **0,00 €** |
 
 # Tase ja omaisuusluettelo {-}
@@ -47,6 +50,7 @@ contact:
 | **Pysyvät vastaavat ja omaisuus** | | | |
 | Kalusto ja laitteet | Yhdistyksen omistama kalusto | X kpl | 0,00 € |
 | [Muu omaisuuserä] | [Kuvaus ja määrä] | X kpl | 0,00 € |
+| :--- | :--- | ---: | ---: |
 | **Vastaavaa yhteensä** | | | **0,00 €** |
 
 # Liitetiedot {-}

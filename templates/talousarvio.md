@@ -24,6 +24,7 @@ Talousarvio perustuu arvioituun jäsenmäärään, suunniteltuun toimintaan sek�
 | Toimintatuotot | Tapahtumat ja osallistumismaksut | 0,00 € |
 | Muut tuotot | Avustukset, lahjoitukset ja varainhankinta | 0,00 € |
 | [Muu tuottoerä] | [Kuvaus ja perustelu] | 0,00 € |
+| :--- | :--- | ---: |
 | **Tulot yhteensä** | | **0,00 €** |
 | | | |
 | **Menot** | | |
@@ -31,8 +32,10 @@ Talousarvio perustuu arvioituun jäsenmäärään, suunniteltuun toimintaan sek�
 | Hallintokulut | Verkkopalvelut, pankkikulut ja toimistotarvikkeet | 0,00 € |
 | Muut menot | Viranomaismaksut ja muut kulut | 0,00 € |
 | [Muu menoerä] | [Kuvaus ja perustelu] | 0,00 € |
+| :--- | :--- | ---: |
 | **Menot yhteensä** | | **0,00 €** |
 | | | |
+| :--- | :--- | ---: |
 | **Tilikauden tulos (ylijäämä / alijäämä)** | | **0,00 €** |
 
 [Kirjaa tähän talousarvion keskeiset perustelut ja selitteet.]
