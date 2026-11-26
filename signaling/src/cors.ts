@@ -5,6 +5,7 @@ export const DEFAULT_ALLOWED_ORIGINS: readonly string[] = [
   "https://rakenna.palikkaharrastajat.fi",
   "https://pienajot.palikkaharrastajat.fi",
   "https://ohoi.palikkaharrastajat.fi",
+  "https://kaupunki.palikkaharrastajat.fi",
 ];
 
 export function getAllowedOrigins(allowedOriginsVar?: string): Set<string> {

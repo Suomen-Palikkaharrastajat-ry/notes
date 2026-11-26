@@ -5,9 +5,9 @@ import { getAllowedOrigins, isAllowedOrigin, corsHeaders } from "../src/cors.ts"
 
 test("CORS: fallback to default allowed origins when ALLOWED_ORIGINS is unset", () => {
   const allowed = getAllowedOrigins(undefined);
-  assert.ok(allowed.has("https://datakurre.github.io"));
-  assert.ok(allowed.has("http://localhost:5173"));
-  assert.equal(isAllowedOrigin("https://datakurre.github.io", undefined), true);
+  assert.ok(allowed.has("https://muistio.palikkaharrastajat.fi"));
+  assert.ok(allowed.has("https://kaupunki.palikkaharrastajat.fi"));
+  assert.equal(isAllowedOrigin("https://kaupunki.palikkaharrastajat.fi", undefined), true);
   assert.equal(isAllowedOrigin("https://evil.example.com", undefined), false);
 });
 
