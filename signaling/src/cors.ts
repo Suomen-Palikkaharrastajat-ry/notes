@@ -4,6 +4,7 @@ export const DEFAULT_ALLOWED_ORIGINS: readonly string[] = [
   "https://muistio.palikkaharrastajat.fi",
   "https://rakenna.palikkaharrastajat.fi",
   "https://pienajot.palikkaharrastajat.fi",
+  "https://kaupunki.palikkaharrastajat.fi",
   "https://ohoi.palikkaharrastajat.fi",
   "https://kaupunki.palikkaharrastajat.fi",
 ];
