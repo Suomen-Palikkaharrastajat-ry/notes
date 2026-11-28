@@ -28,6 +28,8 @@ import { getDocumentTemplates } from "./templates.ts";
 import { importFromDocx } from "./docx.ts";
 import { createAutoscrollTracker } from "./autoscroll.ts";
 import { DownloadDialog } from "./download-dialog.ts";
+import { PdfMergeDialog } from "./pdf-merge-dialog.ts";
+import { resolveEffectiveLogo } from "./logo-resolver.ts";
 // The default seed document (generic Muistio template), kept so the bundle is self-contained.
 import seed from "./seed.md?raw";
 
@@ -49,6 +51,7 @@ export function initEditor() {
   const filesPanelEl = document.getElementById("files-panel")!;
   const filesCloseEl = document.getElementById("files-close") as HTMLButtonElement;
   const filesNewEl = document.getElementById("files-new") as HTMLButtonElement;
+  const filesMergePdfEl = document.getElementById("files-merge-pdf") as HTMLButtonElement | null;
   const filesListEl = document.getElementById("files-list")!;
   const shareEl = document.getElementById("share") as HTMLButtonElement;
   const sharePanelEl = document.getElementById("share-panel")!;
@@ -142,28 +145,37 @@ export function initEditor() {
   let logo: { path: string; name: string; bytes: Uint8Array } | undefined;
   let templateLogo: { path: string; name: string; bytes: Uint8Array } | undefined;
 
+  function effectiveLogoFor(fileId: string): { path: string; name: string; bytes: Uint8Array } | undefined {
+    const defaultLogo = branding.defaultLogo && defaultLogoBytes
+      ? { path: branding.defaultLogo.path, name: branding.defaultLogo.name, bytes: defaultLogoBytes }
+      : undefined;
+
+    const resolved = resolveEffectiveLogo({
+      fileId,
+      activeFileId: fileManager.getActiveFileId(),
+      isLogoCleared: lsGet(STORE.logoCleared) === "1",
+      uploadedLogo: logo,
+      activeTemplateLogo: templateLogo,
+      getStoredTemplateLogo: (fId: string) => {
+        const raw = lsGet(templateLogoStorageKey(fId));
+        if (raw) {
+          try {
+            const s = JSON.parse(raw) as StoredLogo;
+            return { path: s.path, name: s.name, bytes: base64ToBytes(s.b64) };
+          } catch {
+            /* ignore */
+          }
+        }
+        return undefined;
+      },
+      defaultLogo,
+    });
+
+    return resolved ? { path: resolved.path, name: resolved.name ?? "", bytes: resolved.bytes } : undefined;
+  }
+
   function getEffectiveLogo(): { path: string; name: string; bytes: Uint8Array } | undefined {
-    // 1. Explicitly cleared by user
-    if (lsGet(STORE.logoCleared) === "1") {
-      return undefined;
-    }
-    // 2. User-uploaded logo
-    if (logo) {
-      return logo;
-    }
-    // 3. The active document template's bundled SVG logo
-    if (templateLogo) {
-      return templateLogo;
-    }
-    // 4. Fallback to association default logo
-    if (branding.defaultLogo && defaultLogoBytes) {
-      return {
-        path: branding.defaultLogo.path,
-        name: branding.defaultLogo.name,
-        bytes: defaultLogoBytes,
-      };
-    }
-    return undefined;
+    return effectiveLogoFor(fileManager.getActiveFileId());
   }
 
   const logoForPreview = (): Logo | undefined => {
@@ -691,6 +703,7 @@ export function initEditor() {
   };
 
   let downloadDialog: DownloadDialog | undefined;
+  let pdfMergeDialog: PdfMergeDialog | undefined;
   let lastDownloadDialogOpenTime = 0;
   const triggerDownloadDialog = () => {
     const now = Date.now();
@@ -754,6 +767,33 @@ export function initEditor() {
     getMarkdown: () => editor.state.doc.toString(),
     getFilenameBase: () => fileManager.getActiveFile().name.replace(/\.[^.]+$/, "") || "asiakirja",
     onDownloadPdf: downloadPdf,
+    toast,
+    fail,
+  });
+
+  pdfMergeDialog = new PdfMergeDialog({
+    getFiles: () =>
+      fileManager.listFiles().map((f) => ({
+        id: f.id,
+        name: f.name,
+        content:
+          f.id === fileManager.getActiveFileId()
+            ? editor.state.doc.toString()
+            : fileManager.getFile(f.id)?.content ?? "",
+      })),
+    getActiveFile: () => ({
+      id: fileManager.getActiveFile().id,
+      name: fileManager.getActiveFile().name,
+      content: editor.state.doc.toString(),
+    }),
+    getActiveLogo: () => logoForPreview(),
+    getFileLogo: (fileId: string) => {
+      const eff = effectiveLogoFor(fileId);
+      return eff ? { path: eff.path, bytes: eff.bytes } : undefined;
+    },
+    compileMarkdownToPdf: async (md: string, l?: Logo) => {
+      return preview.compileMarkdownToPdf(md, l);
+    },
     toast,
     fail,
   });
@@ -1097,6 +1137,12 @@ export function initEditor() {
     filesToggleEl.addEventListener("click", () => toggleFilesPanel());
     filesCloseEl?.addEventListener("click", () => closeFilesPanel());
     filesNewEl?.addEventListener("click", handleNewDocument);
+    filesMergePdfEl?.addEventListener("click", () => {
+      fileManager.flush();
+      fileManager.saveActiveContent(editor.state.doc.toString());
+      closeFilesPanel();
+      pdfMergeDialog?.open();
+    });
 
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !filesPanelEl.hidden) {

@@ -1714,3 +1714,286 @@ dialog.download-dialog {
   border-top: 1px solid #eceff1;
   background: #f8f9fa;
 }
+
+/* --- PDF Merge Dialog --- */
+dialog.pdf-merge-dialog {
+  max-width: min(38rem, 94vw);
+  width: min(38rem, 94vw);
+}
+
+.pdf-merge-dialog .share-dialog-inner {
+  max-width: 100%;
+  width: 100%;
+}
+
+.pdf-merge-dialog-body {
+  padding: 1.2rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pdf-merge-actions-bar {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pdf-merge-add-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pdf-merge-doc-select-popover {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  margin-top: 0.35rem;
+  width: min(22rem, 90vw);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pdf-merge-popover-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.4rem;
+}
+
+.pdf-merge-popover-empty {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  padding: 0.5rem 0.4rem;
+}
+
+.pdf-merge-popover-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 12rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pdf-merge-popover-item-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.35rem;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.88rem;
+  color: #0f172a;
+  transition: background 0.15s ease;
+}
+
+.pdf-merge-popover-item-btn:hover {
+  background: #f1f5f9;
+}
+
+.pdf-merge-popover-item-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-merge-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.6rem;
+  min-height: 10rem;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: #f8fafc;
+  transition: all 0.15s ease;
+}
+
+.pdf-merge-dropzone.drag-over {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.pdf-merge-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  color: #64748b;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.pdf-merge-empty svg.empty-icon {
+  width: 2rem;
+  height: 2rem;
+  color: #94a3b8;
+}
+
+.pdf-merge-empty p {
+  margin: 0;
+  max-width: 22rem;
+}
+
+.pdf-merge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pdf-merge-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  transition: border-color 0.15s ease;
+}
+
+.pdf-merge-item:hover {
+  border-color: #cbd5e1;
+}
+
+.pdf-merge-item-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pdf-item-up-btn,
+.pdf-item-down-btn {
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdf-item-up-btn svg,
+.pdf-item-down-btn svg {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.pdf-merge-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pdf-item-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+}
+
+.badge-app {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.badge-ext {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pdf-merge-item-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #0f172a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-item-remove-btn {
+  color: #94a3b8;
+}
+
+.pdf-item-remove-btn:hover {
+  color: #ef4444;
+}
+
+.pdf-merge-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pdf-merge-filename-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pdf-merge-filename-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  font-size: 0.88rem;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.pdf-merge-filename-input:focus {
+  outline: 2px solid var(--brand-focus-outline, #05131d);
+  outline-offset: 1px;
+}
+
+.pdf-merge-status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.375rem;
+  color: #1e40af;
+  font-size: 0.85rem;
+}
+
+.pdf-merge-status-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #93c5fd;
+  border-top-color: #1d4ed8;
+  border-radius: 50%;
+  animation: pdf-spin 0.8s linear infinite;
+}
+
+@keyframes pdf-spin {
+  to { transform: rotate(360deg); }
+}

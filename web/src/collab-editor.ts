@@ -565,6 +565,8 @@ export async function initCollabEditor(roomId: string, token: string) {
   // In collaborative mode, hide the single-user reset & share buttons
   if (resetEl) resetEl.hidden = true;
   if (shareEl) shareEl.hidden = true;
+  const filesMergePdfEl = document.getElementById("files-merge-pdf") as HTMLButtonElement | null;
+  if (filesMergePdfEl) filesMergePdfEl.hidden = true;
 
   if (logoLabelEl) {
     logoLabelEl.title = "Lisää logo (jaetaan kaikille muokkaajille)";

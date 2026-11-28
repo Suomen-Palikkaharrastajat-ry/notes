@@ -80,6 +80,19 @@
       <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
       </symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+        <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
+      </symbol>
+      <symbol id="i-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="19" x2="12" y2="5" />
+        <polyline points="5 12 12 5 19 12" />
+      </symbol>
+      <symbol id="i-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <polyline points="19 12 12 19 5 12" />
+      </symbol>
     </svg>
 
     <header>
@@ -172,6 +185,10 @@
         <button id="files-new" type="button" class="files-new-btn" title="Luo uusi tiedosto (Alt-klikkaus: korvaa avoin asiakirja Word- tai Markdown-tiedostolla)">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-new" /></svg>
           <span>Uusi tiedosto</span>
+        </button>
+        <button id="files-merge-pdf" type="button" class="files-new-btn files-merge-btn" title="Yhdistä sovelluksen asiakirjoja ja ulkoisia PDF-tiedostoja">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-layers" /></svg>
+          <span>Yhdistä PDF:t</span>
         </button>
         <button id="files-save-collab" type="button" class="files-new-btn files-save-collab-btn" hidden title="Tallenna huone paikalliseksi tiedostoksi">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download" /></svg>
@@ -308,6 +325,71 @@
         </div>
         <div class="share-dialog-footer">
           <button id="download-dialog-cancel" type="button" class="textbtn secondary">Peruuta</button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- PDF Merge dialog -->
+    <dialog id="pdf-merge-dialog" class="share-dialog pdf-merge-dialog" aria-labelledby="pdf-merge-dialog-title">
+      <div class="share-dialog-inner">
+        <header class="share-dialog-header">
+          <div class="share-dialog-title-group">
+            <svg class="icon share-dialog-title-icon" aria-hidden="true" focusable="false"><use href="#i-layers" /></svg>
+            <h2 id="pdf-merge-dialog-title" class="share-dialog-title">Yhdistä PDF-tiedostoja</h2>
+          </div>
+          <button id="pdf-merge-dialog-close" type="button" class="iconbtn share-dialog-close" title="Sulje" aria-label="Sulje">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-close" /></svg>
+          </button>
+        </header>
+
+        <div class="pdf-merge-dialog-body">
+          <p class="share-card-desc">
+            Yhdistä sovelluksen asiakirjoja ja ulkoisia PDF-tiedostoja yhdeksi PDF-asiakirjaksi haluamassasi järjestyksessä.
+          </p>
+
+          <div class="pdf-merge-actions-bar">
+            <div class="pdf-merge-add-group">
+              <button id="pdf-merge-add-doc-btn" type="button" class="textbtn secondary" aria-expanded="false" aria-controls="pdf-merge-doc-select-popover" title="Lisää sovelluksen tallennettu asiakirja">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-folder" /></svg>
+                <span>Lisää asiakirja…</span>
+              </button>
+              <button id="pdf-merge-upload-btn" type="button" class="textbtn secondary" title="Lisää ulkoinen PDF-tiedosto tietokoneeltasi">
+                <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download" /></svg>
+                <span>Lisää ulkoinen PDF…</span>
+              </button>
+              <input id="pdf-merge-file-input" type="file" accept="application/pdf,.pdf" multiple hidden />
+            </div>
+            <div id="pdf-merge-doc-select-popover" class="pdf-merge-doc-select-popover" hidden></div>
+          </div>
+
+          <div id="pdf-merge-dropzone" class="pdf-merge-dropzone">
+            <ul id="pdf-merge-list" class="pdf-merge-list" role="list"></ul>
+            <div id="pdf-merge-empty" class="pdf-merge-empty" hidden>
+              <svg class="icon empty-icon" aria-hidden="true" focusable="false"><use href="#i-layers" /></svg>
+              <p>Ei lisättyjä tiedostoja. Lisää asiakirja yltä tai raahaa PDF-tiedostoja tähän.</p>
+            </div>
+          </div>
+
+          <div class="pdf-merge-options">
+            <label for="pdf-merge-filename" class="pdf-merge-filename-label">Tulostiedoston nimi:</label>
+            <div class="pdf-merge-filename-input-wrap">
+              <input id="pdf-merge-filename" type="text" class="pdf-merge-filename-input" value="yhdistetty-asiakirja.pdf" />
+            </div>
+          </div>
+
+          <div id="pdf-merge-status" class="pdf-merge-status" hidden>
+            <span class="pdf-merge-status-spinner"></span>
+            <span id="pdf-merge-status-text">Käsitellään tiedostoja…</span>
+          </div>
+          <div id="pdf-merge-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+        </div>
+
+        <div class="share-dialog-footer">
+          <button id="pdf-merge-cancel" type="button" class="textbtn secondary">Peruuta</button>
+          <button id="pdf-merge-execute" type="button" class="textbtn primary">
+            <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-download" /></svg>
+            <span>Yhdistä ja lataa PDF</span>
+          </button>
         </div>
       </div>
     </dialog>

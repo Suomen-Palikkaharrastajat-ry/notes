@@ -6,7 +6,7 @@ import rendererWasmUrl from "@myriaddreamin/typst-ts-renderer/pkg/typst_ts_rende
 
 import { markdownToTypst, ConversionError } from "./md-to-typst.ts";
 import templateSource from "./sfs-2487-2024.typ?raw";
-import type { WorkerRequest, WorkerResponse } from "./typst-worker-types.ts";
+import { type WorkerRequest, type WorkerResponse, mergeLogoPath } from "./typst-worker-types.ts";
 
 let typstInited = false;
 let currentTemplateSource: string | null = null;
@@ -168,6 +168,52 @@ self.addEventListener("message", async (e: MessageEvent<WorkerRequest>) => {
         error: err?.message || String(err),
       };
       self.postMessage(resp);
+    }
+  } else if (req.type === "compile_pdf") {
+    const uniqueLogoPath = mergeLogoPath(req.id, req.logo?.path);
+    let tempLogoMapped = false;
+    try {
+      initTypst(req.fontUrls);
+      const typst = markdownToTypst(req.md, { logoPath: uniqueLogoPath });
+      if (currentTemplateSource !== templateSource) {
+        await $typst.addSource("/sfs-2487-2024.typ", templateSource);
+        currentTemplateSource = templateSource;
+      }
+      if (req.logo && uniqueLogoPath) {
+        await $typst.mapShadow(uniqueLogoPath, req.logo.bytes);
+        tempLogoMapped = true;
+      }
+      const pdfBytes = (await $typst.pdf({ mainContent: typst })) as Uint8Array | undefined;
+      const resp: WorkerResponse = {
+        id: req.id,
+        type: "pdf_success",
+        pdf: pdfBytes,
+      };
+      if (
+        pdfBytes &&
+        pdfBytes.buffer instanceof ArrayBuffer &&
+        pdfBytes.byteOffset === 0 &&
+        pdfBytes.byteLength === pdfBytes.buffer.byteLength
+      ) {
+        self.postMessage(resp, { transfer: [pdfBytes.buffer] });
+      } else {
+        self.postMessage(resp);
+      }
+    } catch (err: any) {
+      const resp: WorkerResponse = {
+        id: req.id,
+        type: "pdf_error",
+        error: err?.message || String(err),
+      };
+      self.postMessage(resp);
+    } finally {
+      if (tempLogoMapped && uniqueLogoPath) {
+        try {
+          await $typst.unmapShadow(uniqueLogoPath);
+        } catch {
+          /* ignore */
+        }
+      }
     }
   }
 });

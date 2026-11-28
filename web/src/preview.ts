@@ -16,6 +16,7 @@ import templateSource from "./sfs-2487-2024.typ?raw";
 import { HighlightTracker } from "./highlight.ts";
 import { createPagePulseTracker, type PagePulseTracker } from "./pulse.ts";
 import type { WorkerRequest, WorkerResponse } from "./typst-worker-types.ts";
+import { mergeLogoPath } from "./typst-worker-types.ts";
 import {
   hoistSvgStyles,
   pageSignature,
@@ -107,6 +108,7 @@ export interface Preview {
   markStale?(): void;
   // The PDF of the last successfully rendered document (or undefined).
   pdf(): Promise<Uint8Array | undefined>;
+  compileMarkdownToPdf(md: string, logo?: Logo): Promise<Uint8Array | undefined>;
   // Whether a document has been rendered (drives the Download button).
   hasContent(): boolean;
   // Briefly reveal the floating view controls (for touch, where there is no hover).
@@ -127,6 +129,7 @@ export class TypstWorkerBridge {
     }
   >();
   private nextRequestId = 0;
+  private inThreadMergeCounter = 0;
   private fallbackInThread = false;
 
   constructor() {
@@ -296,6 +299,70 @@ export class TypstWorkerBridge {
     initInThreadTypst();
     if (!inThreadCurrentTypst) return undefined;
     return (await $typst.pdf({ mainContent: inThreadCurrentTypst })) as Uint8Array | undefined;
+  }
+
+  async compileMarkdownToPdf(md: string, logo?: Logo): Promise<Uint8Array | undefined> {
+    if (this.fallbackInThread || !this.worker) {
+      return this.compileMarkdownToPdfInThread(md, logo);
+    }
+
+    const id = ++this.nextRequestId;
+    return new Promise<Uint8Array | undefined>((resolve, reject) => {
+      this.pendingRequests.set(id, {
+        resolve: (res: WorkerResponse) => {
+          if (res.type === "pdf_success") {
+            resolve(res.pdf);
+          } else if (res.type === "pdf_error") {
+            reject(new Error(res.error));
+          } else {
+            reject(new Error(`Unexpected worker response type: ${res.type}`));
+          }
+        },
+        reject,
+      });
+
+      try {
+        const req: WorkerRequest = {
+          id,
+          type: "compile_pdf",
+          md,
+          logo: logo ? { path: logo.path, bytes: logo.bytes } : undefined,
+          fontUrls: getPreloadFontUrls(),
+        };
+        this.worker!.postMessage(req);
+      } catch (postErr) {
+        this.pendingRequests.delete(id);
+        console.warn("Worker postMessage failed for compile_pdf, falling back to in-thread:", postErr);
+        this.fallbackInThread = true;
+        this.compileMarkdownToPdfInThread(md, logo).then(resolve, reject);
+      }
+    });
+  }
+
+  private async compileMarkdownToPdfInThread(md: string, logo?: Logo): Promise<Uint8Array | undefined> {
+    initInThreadTypst();
+    const uniqueLogoPath = mergeLogoPath(`inthread_${++this.inThreadMergeCounter}`, logo?.path);
+    let tempLogoMapped = false;
+    try {
+      const typst = markdownToTypst(md, { logoPath: uniqueLogoPath });
+      if (inThreadCurrentTemplateSource !== templateSource) {
+        await $typst.addSource("/sfs-2487-2024.typ", templateSource);
+        inThreadCurrentTemplateSource = templateSource;
+      }
+      if (logo && uniqueLogoPath) {
+        await $typst.mapShadow(uniqueLogoPath, logo.bytes);
+        tempLogoMapped = true;
+      }
+      return (await $typst.pdf({ mainContent: typst })) as Uint8Array | undefined;
+    } finally {
+      if (tempLogoMapped && uniqueLogoPath) {
+        try {
+          await $typst.unmapShadow(uniqueLogoPath);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
   }
 
   destroy(): void {
@@ -533,6 +600,7 @@ export function createPreview(els: PreviewElements, cb: PreviewCallbacks): Previ
       if (!rendered) return undefined;
       return bridge.pdf();
     },
+    compileMarkdownToPdf: (md: string, logo?: Logo) => bridge.compileMarkdownToPdf(md, logo),
     destroy: () => bridge.destroy(),
   };
 }
